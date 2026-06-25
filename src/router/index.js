@@ -1,11 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
 // 导入登录组件和布局组件
-// import LoginVue from '../views/Login.vue'
+import LoginVue from '../views/Login.vue'
 import LayoutVue from '../views/Layout.vue'
 
 // 导入文章分类、文章管理、用户信息、用户头像、用户重置密码组件
 import ArticleCategoryVue from '../views/article/ArticleCategory.vue'
 import ArticleManageVue from '../views/article/ArticleManage.vue'
+import ArticleEditorVue from '../views/article/ArticleEditor.vue'
 import UserInfoVue from '../views/user/UserInfo.vue'
 import UserAvatarVue from '../views/user/UserAvatar.vue'
 import UserResetPasswordVue from '../views/user/UserResetPassword.vue'
@@ -22,6 +23,7 @@ const routes = [
     children:[
         {path: '/article/category', component: ArticleCategoryVue},
         {path: '/article/manage', component: ArticleManageVue},
+        {path: '/article/editor', component: ArticleEditorVue},
         {path: '/user/info', component: UserInfoVue},
         {path: '/user/avatar', component: UserAvatarVue},
         {path: '/user/resetPassword', component: UserResetPasswordVue}

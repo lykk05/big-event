@@ -135,13 +135,13 @@ const clearRegisterData = () => {
 </template>
 
 <style lang="scss" scoped>
-/* 样式 */
 .login-page {
     height: 100vh;
-    background-color: #fff;
+    background: linear-gradient(135deg, #e8f4f8 0%, #f0e6f6 50%, #fce4ec 100%);
 
     .bg {
-        background: url('@/assets/logo2.png') no-repeat 60% center / 240px auto,
+        background:
+            url('@/assets/logo2.png') no-repeat 60% center / 240px auto,
             url('@/assets/login_bg.jpg') no-repeat center / cover;
         border-radius: 0 20px 20px 0;
     }
@@ -152,12 +152,58 @@ const clearRegisterData = () => {
         justify-content: center;
         user-select: none;
 
-        .title {
-            margin: 0 auto;
+        :deep(.el-form) {
+            background: #fff;
+            padding: 40px 36px;
+            border-radius: 16px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08);
+            animation: fadeIn 0.4s ease;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 26px;
+            color: #303133;
+            letter-spacing: 6px;
+            margin: 0;
+            padding-bottom: 12px;
+            position: relative;
+
+            &::after {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 40px;
+                height: 3px;
+                border-radius: 2px;
+                background: linear-gradient(90deg, #409eff, #67c23a);
+            }
+        }
+
+        :deep(.el-input__wrapper) {
+            border-radius: 8px;
+            box-shadow: 0 0 0 1px #dcdfe6 inset;
+            transition: box-shadow 0.3s;
+
+            &:hover {
+                box-shadow: 0 0 0 1px #c0c4cc inset;
+            }
         }
 
         .button {
             width: 100%;
+            letter-spacing: 4px;
+            border-radius: 8px;
+            height: 44px;
+            font-size: 16px;
+            transition: all 0.3s;
+
+            &:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(64, 158, 255, 0.4);
+            }
         }
 
         .flex {
@@ -165,6 +211,17 @@ const clearRegisterData = () => {
             display: flex;
             justify-content: space-between;
         }
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 </style>

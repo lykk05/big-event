@@ -16,3 +16,9 @@ spring:
 mybatis:
   configuration:
     map-underscore-to-camel-case: true # 开启驼峰命名和下划线命名的转换
+
+ai:
+  api:
+    url: https://api.deepseek.com/chat/completions # deepseek的url
+    key: ${DEEPSEEK_API_KEY}
+    model: deepseek-v4-pro

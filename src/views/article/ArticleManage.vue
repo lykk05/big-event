@@ -1,7 +1,11 @@
 <script setup>
 import {
     Edit,
-    Delete
+    Delete,
+    View,
+    Link,
+    Clock,
+    CircleClose
 } from '@element-plus/icons-vue'
 
 import { ref } from 'vue'
@@ -143,7 +147,17 @@ const uploadSuccess = (ressult) => {
 }
 
 import { ElMessage,ElMessageBox } from 'element-plus'
+import { useRouter } from 'vue-router'
+const router = useRouter()
 const isEdit = ref(false)
+
+// 跳转到文章编辑页面（新增文章）
+const goToAddArticle = () => {
+    clearArticleModel()
+    isEdit.value = false
+    router.push('/article/editor')
+}
+
 // 添加文章函数
 const addArticle = async (clickState) => {
     // 把发布状态赋值给数据模型
@@ -186,6 +200,41 @@ const updateArticle = (row) => {
     articleModel.value.state = row.state
 }
 
+// 控制预览抽屉是否显示
+const visiblePreviewDrawer = ref(false)
+// 当前预览的文章数据
+const previewArticle = ref({})
+
+// 打开预览抽屉
+const openPreview = (row) => {
+    previewArticle.value = { ...row }
+    visiblePreviewDrawer.value = true
+}
+
+// 关闭预览抽屉
+const closePreview = () => {
+    visiblePreviewDrawer.value = false
+}
+
+// 进入完整编辑
+const goToFullEdit = () => {
+    // TODO: 跳转到完整编辑页面或打开编辑抽屉
+    visiblePreviewDrawer.value = false
+    visibleDrawer.value = true
+    updateArticle(previewArticle.value)
+    isEdit.value = true
+}
+
+// 快捷操作：复制链接
+const copyLink = () => {
+    // TODO: 复制文章链接到剪贴板
+}
+
+// 快捷操作：取消发布
+const unpublishArticle = () => {
+    // TODO: 取消发布接口调用
+}
+
 const deleteCategory = (row) => {
     ElMessageBox.confirm('此操作将永久删除该文章, 是否继续?', '温馨提示', {
         confirmButtonText: '确定',
@@ -215,7 +264,7 @@ const deleteCategory = (row) => {
             <div class="header">
                 <span>文章管理</span>
                 <div class="extra">
-                    <el-button type="primary" @click="visibleDrawer = true; clearArticleModel()">添加文章</el-button>
+                    <el-button type="primary" @click="goToAddArticle">添加文章</el-button>
                 </div>
             </div>
         </template>
@@ -247,8 +296,7 @@ const deleteCategory = (row) => {
             <el-table-column label="状态" prop="state"></el-table-column>
             <el-table-column label="操作" width="100">
                 <template #default="{ row }">
-                    <el-button :icon="Edit" circle plain type="primary"
-                        @click="visibleDrawer = true; updateArticle(row); isEdit=true"></el-button>
+                    <el-button :icon="Edit" circle plain type="primary" @click="openPreview(row)"></el-button>
                     <el-button :icon="Delete" circle plain type="danger" @click="deleteCategory(row)"></el-button>
                 </template>
             </el-table-column>
@@ -260,7 +308,72 @@ const deleteCategory = (row) => {
         <el-pagination v-model:current-page="pageNum" v-model:page-size="pageSize" :page-sizes="[3, 5, 10, 15]"
             layout="jumper, total, sizes, prev, pager, next" background :total="total" @size-change="onSizeChange"
             @current-change="onCurrentChange" style="margin-top: 20px; justify-content: flex-end" />
-        <!-- 抽屉 -->
+        <!-- 预览抽屉 -->
+        <el-drawer v-model="visiblePreviewDrawer" title="文章快速预览" direction="rtl" size="480px" class="preview-drawer">
+            <div class="preview-content">
+                <!-- 封面大图 -->
+                <div class="preview-cover">
+                    <img :src="previewArticle.coverImg || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800'" alt="文章封面" />
+                </div>
+
+                <!-- 标题区域 -->
+                <div class="preview-title-section">
+                    <h2 class="preview-title">{{ previewArticle.title }}</h2>
+                    <div class="preview-tags">
+                        <span class="tag-category">{{ previewArticle.categoryName }}</span>
+                        <span class="tag-status" :class="previewArticle.state === '已发布' ? 'tag-published' : 'tag-draft'">
+                            {{ previewArticle.state }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- 元信息 -->
+                <div class="preview-meta">
+                    <span>发布时间 {{ previewArticle.createTime }}</span>
+                    <span>字数 1,286</span>
+                </div>
+
+                <!-- 分割线 -->
+                <el-divider />
+
+                <!-- 内容摘要 -->
+                <div class="preview-summary">
+                    <h3 class="summary-title">内容摘要</h3>
+                    <p class="summary-text">
+                        {{ previewArticle.content || '本攻略为长沙三日深度旅游行程规划，涵盖岳麓山、橘子洲、湖南博物院等必打卡景点，同时推荐地道美食与特色街区。行程安排兼顾人文历史、自然风光与城市体验，适合首次到访或想要深度探索长沙的游客。附交通建议、住宿区域推荐与实用贴士，助你轻松玩转星城长沙。' }}
+                    </p>
+                </div>
+
+                <!-- 快速操作 -->
+                <div class="preview-actions">
+                    <h3 class="actions-title">快速操作</h3>
+                    <div class="actions-list">
+                        <el-link :underline="false" @click="copyLink">
+                            <el-icon><Link /></el-icon>
+                            <span>复制链接</span>
+                        </el-link>
+                        <el-link :underline="false" @click="unpublishArticle">
+                            <el-icon><Clock /></el-icon>
+                            <span>取消发布</span>
+                        </el-link>
+                        <el-link :underline="false" class="action-danger" @click="deleteCategory(previewArticle); closePreview()">
+                            <el-icon><CircleClose /></el-icon>
+                            <span>删除文章</span>
+                        </el-link>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 底部按钮 -->
+            <template #footer>
+                <div class="preview-footer">
+                    <el-button class="btn-close-preview" @click="closePreview">关闭</el-button>
+                    <el-button type="primary" class="btn-full-edit" @click="goToFullEdit">进入完整编辑</el-button>
+                </div>
+            </template>
+        </el-drawer>
+
+        <!-- 添加/编辑文章抽屉 -->
         <el-drawer v-model="visibleDrawer" title="添加文章" direction="rtl" size="50%">
             <!-- 添加文章表单 -->
             <el-form :model="articleModel" label-width="100px">
@@ -351,6 +464,184 @@ const deleteCategory = (row) => {
 
     :deep(.ql-editor) {
         min-height: 200px;
+    }
+}
+
+// ========== 预览抽屉样式 ==========
+.preview-drawer {
+    :deep(.el-drawer__header) {
+        margin-bottom: 0;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #e4e7ed;
+    }
+
+    :deep(.el-drawer__body) {
+        padding: 0;
+        overflow-y: auto;
+    }
+
+    :deep(.el-drawer__footer) {
+        padding: 16px 20px;
+        border-top: 1px solid #e4e7ed;
+    }
+}
+
+.preview-content {
+    padding: 20px;
+
+    .preview-cover {
+        width: 100%;
+        height: 200px;
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 20px;
+
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    }
+
+    .preview-title-section {
+        margin-bottom: 12px;
+
+        .preview-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #303133;
+            margin: 0 0 12px 0;
+            line-height: 1.4;
+        }
+
+        .preview-tags {
+            display: flex;
+            gap: 8px;
+
+            .tag-category {
+                display: inline-block;
+                padding: 2px 10px;
+                font-size: 12px;
+                color: #1677ff;
+                background: #f0f5ff;
+                border-radius: 4px;
+                border: 1px solid #d4e8ff;
+            }
+
+            .tag-published {
+                display: inline-block;
+                padding: 2px 10px;
+                font-size: 12px;
+                color: #67c23a;
+                background: #f0f9eb;
+                border-radius: 4px;
+                border: 1px solid #c2e7b0;
+            }
+
+            .tag-draft {
+                display: inline-block;
+                padding: 2px 10px;
+                font-size: 12px;
+                color: #909399;
+                background: #f4f4f5;
+                border-radius: 4px;
+                border: 1px solid #dcdfe6;
+            }
+        }
+    }
+
+    .preview-meta {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        color: #666;
+        margin-bottom: 8px;
+    }
+
+    .preview-summary {
+        margin-bottom: 24px;
+
+        .summary-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #303133;
+            margin: 0 0 12px 0;
+        }
+
+        .summary-text {
+            font-size: 13px;
+            color: #606266;
+            line-height: 1.8;
+            margin: 0;
+        }
+    }
+
+    .preview-actions {
+        .actions-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #303133;
+            margin: 0 0 12px 0;
+        }
+
+        .actions-list {
+            display: flex;
+            gap: 24px;
+
+            .el-link {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                font-size: 13px;
+                color: #606266;
+
+                .el-icon {
+                    font-size: 15px;
+                }
+
+                &:hover {
+                    color: #1677ff;
+                }
+
+                &.action-danger:hover {
+                    color: #f56c6c;
+                }
+            }
+        }
+    }
+}
+
+.preview-footer {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+
+    .btn-close-preview {
+        flex: 1;
+        border-color: #dcdfe6;
+        color: #606266;
+        border-radius: 6px;
+        height: 40px;
+        font-size: 14px;
+
+        &:hover {
+            color: #1677ff;
+            border-color: #1677ff;
+        }
+    }
+
+    .btn-full-edit {
+        flex: 1;
+        background: #1677ff;
+        border-color: #1677ff;
+        border-radius: 6px;
+        height: 40px;
+        font-size: 14px;
+
+        &:hover {
+            background: #4096ff;
+            border-color: #4096ff;
+        }
     }
 }
 </style>
