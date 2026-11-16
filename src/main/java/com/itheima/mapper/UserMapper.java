@@ -3,6 +3,7 @@ package com.itheima.mapper;
 import com.itheima.pojo.User;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
@@ -24,6 +25,6 @@ public interface UserMapper {
     @Update("update user set user_pic = #{avatarUrl}, update_time = now() where id = #{id}")
     void updateAvatar(String avatarUrl, Integer id);
 
-    @Update("update user set password = #{md5String}, update_time = now() where id = #{id}")
-    void updatePwd(String md5String, Integer id);
+    @Update("update user set password = #{passwordHash}, update_time = now() where id = #{id}")
+    void updatePwd(@Param("passwordHash") String passwordHash, @Param("id") Integer id);
 }

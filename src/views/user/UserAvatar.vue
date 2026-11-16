@@ -1,6 +1,7 @@
 <script setup>
 import { Plus, Upload } from '@element-plus/icons-vue'
 import {ref} from 'vue'
+import defaultAvatar from '@/assets/default.png'
 
 const uploadRef = ref()
 
@@ -49,7 +50,7 @@ const updateAvatar = async () => {
                     :on-success="uploadSuccess"
                     >
                     <img v-if="imgUrl" :src="imgUrl" class="avatar" />
-                    <img v-else src="avatar" width="278" />
+                    <img v-else :src="defaultAvatar" width="278" />
                 </el-upload>
                 <br />
                 <el-button type="primary" :icon="Plus" size="large"  @click="uploadRef.$el.querySelector('input').click()">

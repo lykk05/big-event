@@ -4,5 +4,6 @@ import com.itheima.pojo.AiRequest;
 import com.itheima.pojo.AiResultVO;
 
 public interface AiService {
-    AiResultVO generate(AiRequest request);
+
+    AiResultVO generate(AiRequest request, Integer userId);
 }

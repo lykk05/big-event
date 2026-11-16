@@ -17,15 +17,16 @@ public interface CategoryMapper {
     @Select("select * from category where create_user = #{userId}")
     List<Category> list(Integer userId);
 
-    // 根据id查询文章分类 --> 在我们编辑文章分类时，需要根据id查询文章分类，才能回显正确的信息给前端界面
-    @Select("select * from category where id = #{id}")
-    Category findById(Integer id);
+    // 根据id查询文章分类（带归属条件）
+    @Select("select * from category where id = #{id} and create_user = #{userId}")
+    Category findById(@Param("id") Integer id, @Param("userId") Integer userId);
 
-    // 更新文章分类
-    @Update("update category set category_name = #{categoryName}, category_alias = #{categoryAlias}, update_time = #{updateTime} where id = #{id}" )
+    // 更新文章分类（带归属条件）
+    @Update("update category set category_name = #{categoryName}, category_alias = #{categoryAlias}, " +
+            "update_time = #{updateTime} where id = #{id} and create_user = #{createUser}")
     void update(Category category);
 
-    // 删除文章分类
-    @Delete("delete from category where id = #{id}")
-    void delete(Integer id);
+    // 删除文章分类（带归属条件）
+    @Delete("delete from category where id = #{id} and create_user = #{createUser}")
+    void delete(@Param("id") Integer id, @Param("createUser") Integer userId);
 }

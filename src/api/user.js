@@ -42,3 +42,8 @@ export const userAvatarUpdateService = (avatarUrl) => {
 export const userPasswordUpdateService = (passwordData) => {
     return request.patch('/user/updatePwd',passwordData)
 }
+
+// 退出登录的接口函数（服务端删除令牌）
+export const userLogoutService = () => {
+    return request.post('/user/logout')
+}

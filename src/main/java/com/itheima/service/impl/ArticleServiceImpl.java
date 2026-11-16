@@ -2,17 +2,20 @@ package com.itheima.service.impl;
 
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
+import com.itheima.convert.ArticleConverter;
+import com.itheima.exception.BizException;
 import com.itheima.mapper.ArticleMapper;
 import com.itheima.pojo.Article;
+import com.itheima.pojo.ArticleDTO;
+import com.itheima.pojo.ArticleVO;
 import com.itheima.pojo.PageBean;
 import com.itheima.service.ArticleService;
-import com.itheima.utils.ThreadLocalUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class ArticleServiceImpl implements ArticleService {
@@ -20,58 +23,76 @@ public class ArticleServiceImpl implements ArticleService {
     @Autowired
     private ArticleMapper articleMapper;
 
-
     @Override
-    public void add(Article article) {
-        // 补充属性值
-        article.setCreateTime(LocalDateTime.now());
-        article.setUpdateTime(LocalDateTime.now());
-        Map<String, Object> map = ThreadLocalUtil.get();
-        Integer id = (Integer)map.get("id");
-        article.setCreateUser(id);
+    @Transactional(rollbackFor = Exception.class)
+    public void add(ArticleDTO articleDTO, Integer userId) {
+        Article article = ArticleConverter.toEntity(articleDTO);
+        LocalDateTime now = LocalDateTime.now();
+        article.setCreateTime(now);
+        article.setUpdateTime(now);
+        article.setCreateUser(userId);
         articleMapper.add(article);
     }
 
     @Override
-    public PageBean<Article> list(Integer pageNum, Integer pageSize, Integer categoryId, String state) {
-        // 1.创建PageBean对象
-        PageBean<Article> pb = new PageBean<>();
-
-        // 2.开启分页查询 PageHelper
+    public PageBean<ArticleVO> list(Integer pageNum, Integer pageSize, Integer categoryId, String state, Integer userId) {
         PageHelper.startPage(pageNum, pageSize);
 
-        // 3.调用mapper
-        // 获取ID
-        Map<String, Object> map = ThreadLocalUtil.get();
-        Integer id = (Integer)map.get("id");
-        List<Article> as = articleMapper.list(id, categoryId, state);
-        // Page中提供了方法，可以获取PageHelper分页查询后得到的总记录条数和当前页数据
-        Page<Article> p = (Page<Article>) as;
+        List<Article> articles = articleMapper.list(userId, categoryId, state);
+        // Page 中提供了分页后的总记录数与当前页数据
+        Page<Article> page = (Page<Article>) articles;
+        List<ArticleVO> items = page.getResult().stream()
+                .map(ArticleConverter::toVO)
+                .toList();
 
-        // 最终封装PageBean对象
-        pb.setTotal(p.getTotal());
-        pb.setItems(p.getResult());
-        return pb;
+        PageBean<ArticleVO> pageBean = new PageBean<>();
+        pageBean.setTotal(page.getTotal());
+        pageBean.setItems(items);
+        return pageBean;
     }
 
     @Override
-    public void update(Article article) {
-        // 补充属性值
+    @Transactional(rollbackFor = Exception.class)
+    public void update(ArticleDTO articleDTO, Integer userId) {
+        if (articleDTO.getId() == null) {
+            throw new BizException(400, "文章id不能为空");
+        }
+
+        // 先判存在、再判归属，给出明确错误而不是静默失败
+        Article db = articleMapper.findById(articleDTO.getId());
+        if (db == null) {
+            throw new BizException(404, "文章不存在");
+        }
+        if (!userId.equals(db.getCreateUser())) {
+            throw new BizException(403, "无权操作该文章");
+        }
+
+        Article article = ArticleConverter.toEntity(articleDTO);
+        article.setId(articleDTO.getId());
+        article.setCreateUser(userId);
         article.setUpdateTime(LocalDateTime.now());
-        Map<String, Object> map =ThreadLocalUtil.get() ;
-        Integer id = (Integer)map.get("id");
-        article.setCreateUser(id);
         articleMapper.update(article);
     }
 
     @Override
-    public Article findById(Integer id) {
-        Article c = articleMapper.findById(id);
-        return c;
+    public ArticleVO findById(Integer id, Integer userId) {
+        Article article = articleMapper.findOwnedById(id, userId);
+        if (article == null) {
+            throw new BizException(404, "文章不存在或无权访问");
+        }
+        return ArticleConverter.toVO(article);
     }
 
     @Override
-    public void delete(Integer id) {
-        articleMapper.delete(id);
+    @Transactional(rollbackFor = Exception.class)
+    public void delete(Integer id, Integer userId) {
+        Article db = articleMapper.findById(id);
+        if (db == null) {
+            throw new BizException(404, "文章不存在");
+        }
+        if (!userId.equals(db.getCreateUser())) {
+            throw new BizException(403, "无权操作该文章");
+        }
+        articleMapper.delete(id, userId);
     }
 }

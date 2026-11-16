@@ -11,7 +11,7 @@ import {
 } from '@element-plus/icons-vue'
 import avatar from '@/assets/default.png'
 
-import { userInfoService } from '@/api/user.js'
+import { userInfoService, userLogoutService } from '@/api/user.js'
 import useUserInfoStore from '@/stores/userInfo.js'
 const userInfoStore = useUserInfoStore()
 // 定义获取用户信息的函数 --> 由于页面加载时，需要获取用户信息，所以需要使用到异步函数
@@ -50,7 +50,13 @@ const handleCommand = (command) => {
                     confirmButtonText: '确定',
                     cancelButtonText: '取消',
                     type: 'warning',
-                }).then(() => {
+                }).then(async () => {
+                    // 先让服务端删除令牌，网络失败也要清理本地状态
+                    try {
+                        await userLogoutService()
+                    } catch (e) {
+                        // 已退出或网络异常，忽略即可
+                    }
                     // 清空pinia中存储的token以及个人信息
                     tokenStore.removeToken()
                     userInfoStore.clearUserInfo()

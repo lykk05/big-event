@@ -27,4 +27,9 @@ public class Result<T> {
     public static Result error(String message) {
         return new Result(1, message, null);
     }
+
+    // 带业务状态码的错误响应（如 400 参数错误、403 无权操作、429 限流）
+    public static Result error(Integer code, String message) {
+        return new Result(code, message, null);
+    }
 }

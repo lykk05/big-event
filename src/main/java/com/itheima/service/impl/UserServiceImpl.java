@@ -2,14 +2,14 @@ package com.itheima.service.impl;
 
 import com.itheima.mapper.UserMapper;
 import com.itheima.pojo.User;
+import com.itheima.pojo.UserUpdateDTO;
 import com.itheima.service.UserService;
-import com.itheima.utils.Md5Util;
-import com.itheima.utils.ThreadLocalUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -17,39 +17,49 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private UserMapper userMapper;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     // 重写查询用户方法
     @Override
     public User findByUsername(String username) {
-        User u = userMapper.findByUsername(username);
-        return u;
+        return userMapper.findByUsername(username);
     }
 
     // 重写注册方法
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void register(String username, String password) {
-        // 不能直接调用userMapper里的方法，需要先对password加密
-        String md5Password = Md5Util.getMD5String(password);
-        // 调用userMapper方法进行添加
-        userMapper.add(username, md5Password);
+        userMapper.add(username, passwordEncoder.encode(password));
     }
 
     @Override
-    public void update(User user) {
+    @Transactional(rollbackFor = Exception.class)
+    public void updateCurrentUser(UserUpdateDTO userUpdateDTO, Integer userId) {
+        User user = new User();
+        user.setId(userId);                 // id 只来自登录上下文，不采信请求体
+        user.setNickname(userUpdateDTO.getNickname());
+        user.setEmail(userUpdateDTO.getEmail());
         user.setUpdateTime(LocalDateTime.now());
         userMapper.update(user);
     }
 
     @Override
-    public void updateAvatar(String avatarUrl) {
-        Map<String, Object> map = ThreadLocalUtil.get();
-        Integer id = (Integer) map.get("id");
-        userMapper.updateAvatar(avatarUrl, id);
+    @Transactional(rollbackFor = Exception.class)
+    public void updateAvatar(String avatarUrl, Integer userId) {
+        userMapper.updateAvatar(avatarUrl, userId);
     }
 
     @Override
-    public void updatePwd(String newPwd) {
-        Map<String, Object> map = ThreadLocalUtil.get();
-        Integer id = (Integer) map.get("id");
-        userMapper.updatePwd(Md5Util.getMD5String(newPwd), id);
+    @Transactional(rollbackFor = Exception.class)
+    public void updatePwd(Integer userId, String newPwd) {
+        userMapper.updatePwd(passwordEncoder.encode(newPwd), userId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updatePwdHash(Integer userId, String encodedPassword) {
+        // 已经是 BCrypt 散列，不能再做一次 MD5
+        userMapper.updatePwd(encodedPassword, userId);
     }
 }

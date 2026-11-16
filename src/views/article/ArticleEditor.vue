@@ -1,10 +1,11 @@
 d:\code\big-event\src\views\article\ArticleEditor.vue
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTokenStore } from '@/stores/token.js'
 import { ElMessage } from 'element-plus'
-import { articleAddService } from '@/api/article.js'
+import DOMPurify from 'dompurify'
+import { articleAddService, articleCategoryListService } from '@/api/article.js'
 import { aiGenerateService } from '@/api/ai.js'
 const router = useRouter()
 const tokenStore = useTokenStore()
@@ -49,15 +50,8 @@ const articleForm = ref({
     content: ''
 })
 
-// 文章分类选项
-const categoryOptions = ref([
-    { value: 1, label: '美食' },
-    { value: 2, label: '娱乐' },
-    { value: 3, label: '军事' },
-    { value: 4, label: '旅游' },
-    { value: 5, label: '科技' },
-    { value: 6, label: '历史' }
-])
+// 文章分类选项：从后端加载当前用户创建的分类
+const categoryOptions = ref([])
 
 // 文章内容预填充文本（攻略正文）
 const defaultContent = ref(
@@ -148,10 +142,20 @@ const goBack = () => {
 
 // ---------- 右侧AI助手面板数据 ----------
 
-// 页面加载时自动填充默认内容
-onMounted(() => {
+// 页面加载时自动填充默认内容，并加载当前用户的分类
+onMounted(async () => {
     articleForm.value.content = defaultContent.value
     onContentChange()
+    try {
+        const res = await articleCategoryListService()
+        categoryOptions.value = (res.data || []).map(c => ({ value: c.id, label: c.categoryName }))
+        // 当前选中的分类不存在时，回退到第一个可用分类
+        if (!categoryOptions.value.some(option => option.value === articleForm.value.category)) {
+            articleForm.value.category = categoryOptions.value[0]?.value ?? null
+        }
+    } catch (e) {
+        // 分类加载失败时保持空列表，用户仍可先去分类管理创建
+    }
 })
 
 // ---------- 右侧AI助手面板数据（聊天式） ----------
@@ -165,8 +169,14 @@ const aiInput = ref('')
 // 加载状态
 const aiLoading = ref(false)
 
+// 当前在途 AI 请求的取消控制器
+let aiController = null
+
 // 当前正在处理的action
 const currentAction = ref('')
+
+// 渲染 AI 返回的 HTML 前先净化，防止 XSS
+const safeHtml = (html) => DOMPurify.sanitize(html || '', { USE_PROFILES: { html: true } })
 
 // Action 映射表
 const ACTION_MAP = {
@@ -194,6 +204,11 @@ const chatContainerRef = ref(null)
 const sendMessage = async (actionLabel = null, customText = null) => {
     const text = customText || aiInput.value.trim()
     if (!text && !actionLabel) return
+
+    // 新请求开始前取消上一个在途请求，避免旧结果串进新文章
+    if (aiController) {
+        aiController.abort()
+    }
 
     const isCustom = !actionLabel
     const action = isCustom ? 'CUSTOM' : ACTION_MAP[actionLabel]
@@ -227,20 +242,36 @@ const sendMessage = async (actionLabel = null, customText = null) => {
         content: articleForm.value.content, selectedText: selectedText || '', instruction: isCustom ? text : ''
     }
 
+    const controller = new AbortController()
+    aiController = controller
+
     try {
-        let res = await aiGenerateService(payload)
+        let res = await aiGenerateService(payload, { signal: controller.signal })
         messages.value.push(buildAIMessage(action, res.data.output))
     } catch (error) {
+        // 用户切换/取消导致的请求中止，不提示错误
+        if (error.code === 'ERR_CANCELED') return
         messages.value.push({
             id: Date.now() + 1, role: 'ai',
-            content: error.response?.data?.message || 'AI服务暂时不可用，请稍后重试', type: 'error',
+            content: error.response?.data?.message || error.message || 'AI服务暂时不可用，请稍后重试', type: 'error',
             time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
         })
     } finally {
-        aiLoading.value = false
-        setTimeout(() => scrollToBottom(), 100)
+        // 只让当前请求负责收尾，避免旧请求把新请求的状态清掉
+        if (aiController === controller) {
+            aiController = null
+            aiLoading.value = false
+            setTimeout(() => scrollToBottom(), 100)
+        }
     }
 }
+
+onBeforeUnmount(() => {
+    if (aiController) {
+        aiController.abort()
+        aiController = null
+    }
+})
 
 // 构建AI回复消息对象
 const buildAIMessage = (action, output) => {
@@ -452,7 +483,7 @@ const scrollToBottom = () => {
                                 <!-- 文本类回复 -->
                                 <template v-if="msg.type === 'content' || msg.type === 'error'">
                                     <div v-if="msg.type === 'error'" class="error-text">{{ msg.content }}</div>
-                                    <div v-else class="ai-content-text" v-html="msg.content"></div>
+                                    <div v-else class="ai-content-text" v-html="safeHtml(msg.content)"></div>
                                     <div class="msg-actions">
                                         <button class="msg-btn" @click="replaceToContent(msg)">替换到正文</button>
                                         <button class="msg-btn" @click="insertAtCursor(msg)">插入光标处</button>

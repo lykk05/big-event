@@ -11,12 +11,10 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Autowired
     private LoginInterceptor loginInterceptor;
-    // 注册拦截器
+
+    // 注册拦截器：放行规则由 @PublicApi 注解声明，不再硬编码路径
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // 不能拦截所有的请求 比如 登录 注册
-        registry.addInterceptor(loginInterceptor).excludePathPatterns("/user/login", "/user/register");
+        registry.addInterceptor(loginInterceptor);
     }
-
-
 }
