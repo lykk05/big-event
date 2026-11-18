@@ -4,6 +4,8 @@ import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 //控制注册与登录表单的显示， 默认显示登录
 const isRegister = ref(false)
+// 表单实例，提交前统一调用 validate()
+const formRef = ref()
 // 定义数据模型
 const registerData = ref({
     username: '',
@@ -25,20 +27,32 @@ const checkRePassword = (rule, value, callback) => {
 const rules = {
     username: [
         { required: true, message: '请输入用户名', trigger: 'blur' },
-        { min: 5, max: 16, message: '长度在 5 到 16 个字符', trigger: 'blur' },
+        { pattern: /^\S{2,16}$/, message: '用户名必须为2-16位且不能包含空格', trigger: 'blur' }
     ],
     password: [
         { required: true, message: '请输入密码', trigger: 'blur' },
-        { min: 5, max: 16, message: '长度在5到16个字符', trigger: 'blur' }
+        { pattern: /^\S{5,16}$/, message: '密码必须为5-16位且不能包含空格', trigger: 'blur' }
     ],
     confirmPassword: [
-        {validator: checkRePassword, trigger: 'blur'}
+        { validator: checkRePassword, trigger: 'blur' }
     ]
+}
+
+// 提交前先做本地校验，避免把空值/带空格的值发给后端
+const validateForm = async () => {
+    if (!formRef.value) return false
+    try {
+        await formRef.value.validate()
+        return true
+    } catch (e) {
+        return false
+    }
 }
 
 // 调用后台接口，完成接口注册
 import { userRegisterService } from '@/api/user.js'
 const register = async () => {
+    if (!(await validateForm())) return
     let res = await userRegisterService(registerData.value)
     ElMessage.success(res.message? res.message : '注册成功')
     isRegister.value = false
@@ -54,6 +68,7 @@ const router = useRouter() //
 import { useTokenStore } from '@/stores/token.js'
 const tokenStore = useTokenStore()
 const login = async () => {
+    if (!(await validateForm())) return
     let res = await userLoginService(registerData.value)
     ElMessage.success(res.message? res.message : '登录成功')
     // 把得到的token存到tokenStore中
@@ -78,7 +93,7 @@ const clearRegisterData = () => {
         <el-col :span="12" class="bg"></el-col>
         <el-col :span="6" :offset="3" class="form">
             <!-- 注册表单 -->
-            <el-form ref="form" size="large" autocomplete="off" v-if="isRegister" :model="registerData" :rules="rules">
+            <el-form ref="formRef" size="large" autocomplete="off" v-if="isRegister" :model="registerData" :rules="rules">
                 <el-form-item>
                     <h1>注册</h1>
                 </el-form-item>
@@ -104,7 +119,7 @@ const clearRegisterData = () => {
                 </el-form-item>
             </el-form>
             <!-- 登录表单 -->
-            <el-form ref="form" size="large" autocomplete="off" v-else :model="registerData" :rules="rules">
+            <el-form ref="formRef" size="large" autocomplete="off" v-else :model="registerData" :rules="rules">
                 <el-form-item>
                     <h1>登录</h1>
                 </el-form-item>

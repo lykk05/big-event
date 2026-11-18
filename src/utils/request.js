@@ -25,6 +25,7 @@ instance.interceptors.request.use(
 )
 
 import router from '@/router';
+let isHandling401 = false;
 //添加响应拦截器
 instance.interceptors.response.use(
     result=>{
@@ -48,8 +49,14 @@ instance.interceptors.response.use(
         }
         // 判断响应状态码为401，证明未登录，提示请登录，并跳转到登录页
         if(err.response.status===401){
-            ElMessage.error('请先登录')
-            router.push('/login')
+            // 已在登录页，或同一批请求已经触发过跳转时，不再重复提示
+            if (router.currentRoute.value.path !== '/login' && !isHandling401) {
+                isHandling401 = true
+                ElMessage.error('请先登录')
+                router.push('/login').finally(() => {
+                    isHandling401 = false
+                })
+            }
         }else{
             ElMessage.error(`服务异常（${err.response.status}）`);
         }

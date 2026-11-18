@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useTokenStore } from '@/stores/token.js'
 // 导入登录组件和布局组件
 import LoginVue from '../views/Login.vue'
 import LayoutVue from '../views/Layout.vue'
@@ -34,6 +35,14 @@ const routes = [
 const router = createRouter({
     history: createWebHistory(),
     routes: routes
+})
+
+// 未登录时不要进入受保护页面，避免页面同时发多个请求导致 401 提示刷屏
+router.beforeEach((to) => {
+    const tokenStore = useTokenStore()
+    if (to.path !== '/login' && !tokenStore.token) {
+        return '/login'
+    }
 })
 
 // 导出路由器

@@ -31,8 +31,9 @@ public class UserController {
     // 该接口用于注册新用户
     @PublicApi
     @PostMapping("/register")
-    public Result register(@Pattern(regexp = "^\\S{5,16}$") String username,
-                           @Pattern(regexp = "^\\S{5,16}$") String password) {
+    public Result register(
+            @Pattern(regexp = "^\\S{2,16}$", message = "用户名必须为2-16位且不能包含空格") String username,
+            @Pattern(regexp = "^\\S{5,16}$", message = "密码必须为5-16位且不能包含空格") String password) {
         User u = userService.findByUsername(username);
         if (u == null) {
             userService.register(username, password);
@@ -44,8 +45,9 @@ public class UserController {
     // 该接口用于登录
     @PublicApi
     @PostMapping("/login")
-    public Result<String> login(@Pattern(regexp = "^\\S{5,16}$") String username,
-                                @Pattern(regexp = "^\\S{5,16}$") String password) {
+    public Result<String> login(
+            @Pattern(regexp = "^\\S{2,16}$", message = "用户名必须为2-16位且不能包含空格") String username,
+            @Pattern(regexp = "^\\S{5,16}$", message = "密码必须为5-16位且不能包含空格") String password) {
         return Result.success(loginService.login(username, password));
     }
 
